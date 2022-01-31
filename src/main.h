@@ -1,0 +1,11 @@
+#ifndef MAIN_H
+#define MAIN_H
+
+#define _8BPP
+
+#define SCREEN_WIDTH 256
+#define SCREEN_HEIGHT 256
+
+#define SCREEN_SIZE_IN_PIXELS (SCREEN_WIDTH * SCREEN_HEIGHT)
+
+#endif
