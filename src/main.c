@@ -55,21 +55,67 @@ static void vsync()
 }
 */
 
+uint16 RGB2YUV(int r, int g, int b)
+{
+	uint16 yuv;
+
+	int Y = (19595 * r + 38469 * g + 7471 * b) >> 16;
+	int U = ((32243 * (b - Y)) >> 16) + 128;
+	int V = ((57475 * (r - Y)) >> 16) + 128;
+
+	if (Y <   0) Y =   0;
+	if (Y > 255) Y = 255;
+	if (U <   0) U =   0;
+	if (U > 255) U = 255;
+	if (V <   0) V =   0;
+	if (V > 255) V = 255;
+
+	yuv = (uint16)((Y<<8) | ((U>>4)<<4) | (V>>4));
+
+	return yuv;
+}
+
+void setPal(int c, int r, int g, int b, uint16* pal)
+{
+	CLAMP(r, 0, 255)
+	CLAMP(g, 0, 255)
+	CLAMP(b, 0, 255)
+
+	pal[c] = RGB2YUV(r,g,b);
+}
+
+void setPalGradient(int c0, int c1, int r0, int g0, int b0, int r1, int g1, int b1, uint16* pal)
+{
+	int i;
+	const int dc = (c1 - c0);
+	const int dr = ((r1 - r0) << 16) / dc;
+	const int dg = ((g1 - g0) << 16) / dc;
+	const int db = ((b1 - b0) << 16) / dc;
+
+	r0 <<= 16;
+	g0 <<= 16;
+	b0 <<= 16;
+
+	for (i = c0; i <= c1; i++)
+	{
+		setPal(i, r0>>16, g0>>16, b0>>16, pal);
+
+		r0 += dr;
+		g0 += dg;
+		b0 += db;
+	}
+}
+
 
 static void initPal()
 {
 	int i;
-	for (i=0; i<64; ++i) {
-		myPal[i] = (i<<10) | (i<<0);
-	}
-	for (i=64; i<128; ++i) {
-		myPal[i] = (255<<8) | (255 + 64 - i);
-	}
-	for (i=128; i<192; ++i) {
-		myPal[i] = (255<<8) | (192 - 2*(i- 128));
-	}
-	for (i=192; i<256; ++i) {
-		myPal[i] = ((255-i)<<10) | ((255-i)<<0);
+	for (i=0; i<4; ++i) {
+		uint16 *palPtr = &myPal[i*64];
+		setPalGradient(0,15, 0,0,0, 255,127,31, palPtr);
+		setPalGradient(16,31, 255,127,31, 63,191,255, palPtr);
+		setPalGradient(32,47, 63,191,255, 191,31,63, palPtr);
+		setPalGradient(48,63, 191,31,63, 0,0,0, palPtr);
 	}
 }
 
@@ -281,10 +327,10 @@ unsigned int fsin1_32[NUM_SINES/4] = {
 static void testPlasma(int t)
 {
 	int x;
-	int y = SCREEN_HEIGHT;
+	int y = 236; //SCREEN_HEIGHT;
 	unsigned char *fsy = (unsigned char*)fsin1_32;
 
-	eris_king_set_kram_write(0, 1);
+	eris_king_set_kram_write(SCREEN_SIZE_IN_PIXELS * 4, 1);
 
 	while(y!=0) {
 		const unsigned char yp = ((fsy[(y + 3*t) & (NUM_SINES-1)] + fsy[(3*y + 2*t) & (NUM_SINES-1)]) >> 1);
@@ -319,7 +365,7 @@ int main()
 	for(;;) {
 		testPlasma(t++);
 
-		drawNumber(4,231-4, t);
+		//drawNumber(16,216, t);
 	}
 
 	return 0;
