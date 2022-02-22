@@ -11,6 +11,7 @@
 
 #include "main.h"
 #include "tinyfont.h"
+#include "fastking.h"
 
 #include "sin32tab.h"
 
@@ -272,8 +273,7 @@ static void testPlasma(int t)
 	int x;
 	int y = 200; //SCREEN_HEIGHT;
 	unsigned char *fsy = (unsigned char*)fsin1_32;
-
-	eris_king_set_kram_write(SCREEN_SIZE_IN_PIXELS * 4, 1);
+	unsigned int *dst32 = (unsigned int*)framebuffer;
 
 	while(y!=0) {
 		const unsigned char yp = ((fsy[(y + 3*t) & (NUM_SINES-1)] + fsy[(3*y + 2*t) & (NUM_SINES-1)]) >> 1);
@@ -283,10 +283,7 @@ static void testPlasma(int t)
 		x = SCREEN_WIDTH >> 2;
 		while(x!=0) {
 			const unsigned int c = *fs1++ + ysin;
-			const unsigned short c0 = (c << 8) | ((c>>8) & 0x00FF);
-			const unsigned short c1 = ((c >> 8) & 0xFF00) | (c>>24);
-			eris_king_kram_write(c0);
-			eris_king_kram_write(c1);
+			*dst32++ = c;
 			--x;
 		}
 		--y;
@@ -310,8 +307,6 @@ static int getFps()
 
 int main()
 {
-	//int t0, t1;
-
 	initPal();
 	initDisplay();
 	initTimer();
@@ -320,6 +315,11 @@ int main()
 	
 	for(;;) {
 		testPlasma(nframe++);
+
+		eris_king_set_kram_write(SCREEN_SIZE_IN_PIXELS * 4, 1);
+
+		//king_kram_write_buffer(framebuffer, SCREEN_SIZE_IN_PIXELS);
+		king_kram_write_buffer_bytes(framebuffer, SCREEN_SIZE_IN_PIXELS);
 
 		drawNumber(16,216, getFps());
 	}
